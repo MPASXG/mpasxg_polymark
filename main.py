@@ -58,19 +58,3 @@ def health():
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
 ```
-
----
-
-**`requirements.txt`**
-```
-flask==3.1.0
-flask-cors==5.0.0
-requests==2.32.3
-gunicorn==23.0.0
-```
-
----
-
-**`Procfile`** (sans extension !)
-```
-web: gunicorn main:app --bind 0.0.0.0:$PORT
