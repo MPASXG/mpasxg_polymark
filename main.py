@@ -14,43 +14,45 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Yield Hunter Galaxy 50k</title>
+        <title>Yield Hunter Nebula 75k</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
             ::-webkit-scrollbar { width: 8px; }
             ::-webkit-scrollbar-track { background: #020617; }
             ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-            .glow-text { text-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+            .glow-text { text-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
         </style>
     </head>
-    <body class="bg-[#020617] text-slate-300 p-4 md:p-10 font-sans">
+    <body class="bg-[#02040a] text-slate-300 p-4 md:p-10 font-sans">
         <div class="max-w-7xl mx-auto">
-            <div class="flex flex-col md:flex-row justify-between items-center mb-10 bg-slate-900/40 p-8 rounded-[2rem] border border-white/5 shadow-2xl backdrop-blur-xl">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-10 bg-slate-900/20 p-8 rounded-[2.5rem] border border-white/5 shadow-2xl backdrop-blur-3xl">
                 <div class="text-center md:text-left">
-                    <h1 class="text-4xl font-black text-white tracking-tighter italic glow-text uppercase">🌌 GALAXY-SCAN <span class="text-blue-500" id="scan-count">0</span></h1>
-                    <p class="text-slate-500 text-[10px] mt-2 uppercase tracking-[0.4em] font-black opacity-70">Filtre: 0.5j - 45j | Vol > $1k | Limit: 50k</p>
+                    <h1 class="text-4xl font-black text-white tracking-tighter italic glow-text uppercase">🌌 NEBULA-SCAN <span class="text-blue-500" id="scan-count">0</span></h1>
+                    <p class="text-slate-500 text-[10px] mt-2 uppercase tracking-[0.4em] font-black opacity-70 italic">
+                        Exclus: Temperature, Spread | 0.5j-45j | Limit: 75k
+                    </p>
                 </div>
                 <div class="mt-6 md:mt-0 flex flex-col items-end">
-                    <div id="progress" class="text-blue-400 font-mono text-xs bg-blue-500/10 px-6 py-3 rounded-2xl border border-blue-500/20">
-                        Initialisation...
+                    <div id="progress" class="text-blue-400 font-mono text-xs bg-blue-500/10 px-8 py-4 rounded-3xl border border-blue-500/20 shadow-lg">
+                        Séquence de boot...
                     </div>
-                    <div id="match-counter" class="mt-2 text-[10px] font-bold text-slate-600 uppercase tracking-widest">0 pépites trouvées</div>
+                    <div id="match-counter" class="mt-2 text-[10px] font-bold text-slate-600 uppercase tracking-widest">0 opportunités filtrées</div>
                 </div>
             </div>
             
-            <div class="bg-slate-900/40 rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl overflow-x-auto">
+            <div class="bg-slate-900/30 rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl overflow-x-auto">
                 <table class="w-full text-left border-collapse text-[11px] md:text-xs">
-                    <thead class="bg-white/[0.02] text-slate-500 uppercase font-black tracking-widest text-[9px]">
+                    <thead class="bg-white/[0.01] text-slate-500 uppercase font-black tracking-widest text-[9px]">
                         <tr>
-                            <th class="p-6">Marché</th>
+                            <th class="p-6">Marché (Filtré)</th>
                             <th class="p-6 text-center">Côté</th>
                             <th class="p-4 text-right text-slate-400">Volume</th>
                             <th class="p-4 text-right text-slate-400">Prix</th>
                             <th class="p-4 text-right text-orange-500/50">Échéance</th>
-                            <th class="p-6 text-right text-blue-400">Yield Score</th>
+                            <th class="p-6 text-right text-blue-500 font-black">Yield</th>
                         </tr>
                     </thead>
-                    <tbody id="content" class="divide-y divide-white/[0.03]">
+                    <tbody id="content" class="divide-y divide-white/[0.02]">
                         </tbody>
                 </table>
             </div>
@@ -63,12 +65,12 @@ def index():
             const scanCount = document.getElementById('scan-count');
             const matchCounter = document.getElementById('match-counter');
 
-            async function runUltraDeepScan() {
-                const totalBlocks = 50; 
+            async function runNebulaScan() {
+                const totalBlocks = 75; // 75,000 marchés
                 
                 for (let i = 0; i < totalBlocks; i++) {
                     const offset = i * 1000;
-                    progress.innerText = `EXPLORATION BLOC ${i+1}/${totalBlocks}...`;
+                    progress.innerText = `EXPLORATION SECTEUR ${i+1}/${totalBlocks}...`;
                     scanCount.innerText = (offset + 1000).toLocaleString();
 
                     try {
@@ -79,17 +81,17 @@ def index():
                             chunk.forEach(item => allData.set(item.slug, item));
                             
                             const sortedArray = Array.from(allData.values()).sort((a, b) => b.yield - a.yield);
-                            matchCounter.innerText = `${sortedArray.length} pépites trouvées`;
+                            matchCounter.innerText = `${sortedArray.length} pépites filtrées`;
                             renderTable(sortedArray);
                         }
                     } catch (e) {
                         console.error("Erreur secteur " + i);
                     }
                     
-                    // Pause CPU pour fluidité UI
-                    if (i % 2 === 0) await new Promise(r => setTimeout(r, 100));
+                    // On laisse souffler le navigateur
+                    if (i % 2 === 0) await new Promise(r => setTimeout(r, 80));
                 }
-                progress.innerText = "SCAN TERMINÉ (50k)";
+                progress.innerText = "EXPLORATION TERMINÉE";
                 progress.classList.replace('text-blue-400', 'text-green-400');
             }
 
@@ -97,21 +99,21 @@ def index():
                 tbody.innerHTML = data.map(m => `
                     <tr class="hover:bg-blue-500/[0.04] transition-all duration-300 group">
                         <td class="p-6 font-bold text-slate-300 max-w-lg leading-relaxed">
-                            <a href="https://polymarket.com/market/${m.slug}" target="_blank" class="hover:text-blue-400 transition-colors italic">${m.question}</a>
+                            <a href="https://polymarket.com/market/${m.slug}" target="_blank" class="hover:text-blue-400 transition-colors">${m.question}</a>
                         </td>
                         <td class="p-6 text-center">
-                            <span class="bg-slate-950 px-3 py-1 rounded-full border border-slate-800 text-[9px] font-black group-hover:border-blue-500/40 uppercase text-slate-400">${m.side}</span>
+                            <span class="bg-slate-950 px-3 py-1 rounded-full border border-slate-800 text-[9px] font-black group-hover:border-blue-500/40 uppercase text-slate-500">${m.side}</span>
                         </td>
                         <td class="p-4 text-right text-slate-500 font-mono italic">$${(m.volume/1000).toFixed(1)}k</td>
                         <td class="p-4 text-right font-mono text-slate-400">${m.price.toFixed(3)}</td>
                         <td class="p-4 text-right font-mono text-orange-500/70 font-bold tracking-tighter">${m.days_left.toFixed(2)}j</td>
-                        <td class="p-6 text-right font-mono text-blue-400 text-sm font-black italic group-hover:scale-110 transition-transform origin-right">
+                        <td class="p-6 text-right font-mono text-blue-500 text-sm font-black italic group-hover:scale-110 transition-transform origin-right leading-none">
                             ${m.yield.toFixed(2)}
                         </td>
                     </tr>`).join('');
             }
 
-            runUltraDeepScan();
+            runNebulaScan();
         </script>
     </body>
     </html>
@@ -122,6 +124,9 @@ def scan_chunk():
     offset = request.args.get('offset', default=0, type=int)
     all_results = []
     now = datetime.now(timezone.utc)
+    
+    # Mots-clés à bannir
+    excluded_keywords = ["temperature", "spread"]
     
     try:
         session = requests.Session()
@@ -143,6 +148,12 @@ def scan_chunk():
 
         for m in markets:
             try:
+                question = m.get("question", "").lower()
+                
+                # --- FILTRE D'EXCLUSION ---
+                if any(word in question for word in excluded_keywords):
+                    continue
+
                 # 1. Filtre Volume $1k
                 vol = float(m.get("volume", 0) or 0)
                 if vol < 1000: continue
