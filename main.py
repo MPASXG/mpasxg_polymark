@@ -12,25 +12,29 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Polymarket > 90c</title>
+        <title>Screener Polymarket Pro</title>
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
-    <body class="bg-gray-900 text-white p-10">
-        <h1 class="text-2xl font-bold mb-6">Top 30 Marchés (Prix > 0.90$)</h1>
-        <div class="bg-gray-800 rounded-lg overflow-hidden shadow-xl">
-            <table class="w-full text-left">
-                <thead class="bg-gray-700 text-gray-300 uppercase text-xs">
-                    <tr>
-                        <th class="p-4">Question</th>
-                        <th class="p-4 text-center">Côté</th>
-                        <th class="p-4 text-right">Prix</th>
-                        <th class="p-4 text-right">Jours restants</th>
-                    </tr>
-                </thead>
-                <tbody id="content">
-                    <tr><td colspan="4" class="p-10 text-center text-gray-500">Chargement des données...</td></tr>
-                </tbody>
-            </table>
+    <body class="bg-slate-900 text-slate-100 p-6 md:p-12">
+        <div class="max-w-5xl mx-auto">
+            <h1 class="text-2xl font-bold mb-2">🎯 Opportunités Filtrées</h1>
+            <p class="text-slate-400 text-sm mb-6">Prix entre 0.90$ et 0.99$ | Temps > 12h (0.5j)</p>
+            
+            <div class="bg-slate-800 rounded-xl shadow-2xl overflow-hidden border border-slate-700">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-700/50 text-slate-400 text-xs uppercase tracking-wider">
+                        <tr>
+                            <th class="p-4">Marché</th>
+                            <th class="p-4 text-center">Côté</th>
+                            <th class="p-4 text-right">Prix actuel</th>
+                            <th class="p-4 text-right">Échéance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="content" class="divide-y divide-slate-700">
+                        <tr><td colspan="4" class="p-10 text-center text-slate-500 italic text-sm">Analyse des marchés en cours...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
         <script>
             fetch('/api/markets')
@@ -38,21 +42,19 @@ def index():
                 .then(data => {
                     const tbody = document.getElementById('content');
                     if (data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center">Aucun marché trouvé.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="4" class="p-10 text-center text-slate-500">Aucun marché ne correspond aux critères actuellement.</td></tr>';
                         return;
                     }
                     tbody.innerHTML = data.map(m => `
-                        <tr class="border-b border-gray-700 hover:bg-gray-750 transition">
-                            <td class="p-4 text-sm font-medium">${m.question}</td>
+                        <tr class="hover:bg-slate-700/40 transition">
+                            <td class="p-4 text-sm font-medium leading-snug">${m.question}</td>
                             <td class="p-4 text-center">
-                                <span class="px-2 py-1 rounded text-[10px] font-bold ${m.side === 'YES' ? 'bg-blue-900 text-blue-300' : 'bg-purple-900 text-purple-300'}">
+                                <span class="px-2 py-1 rounded text-[10px] font-bold ${m.side === 'YES' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'} border ${m.side === 'YES' ? 'border-blue-500/30' : 'border-purple-500/30'}">
                                     ${m.side}
                                 </span>
                             </td>
-                            <td class="p-4 text-right font-mono text-green-400 font-bold">${m.price.toFixed(2)}$</td>
-                            <td class="p-4 text-right font-mono text-orange-400">
-                                ${m.days_left > 0 ? m.days_left.toFixed(1) + 'j' : 'Expire bientôt'}
-                            </td>
+                            <td class="p-4 text-right font-mono font-bold text-green-400">${m.price.toFixed(3)}$</td>
+                            <td class="p-4 text-right font-mono text-orange-300 text-sm italic">${m.days_left.toFixed(1)}j</td>
                         </tr>
                     `).join('');
                 });
@@ -66,13 +68,13 @@ def get_markets():
     params = {
         "active": "true",
         "closed": "false",
-        "limit": 150, # On augmente la limite de recherche pour trouver nos 30
+        "limit": 200, # On scanne large pour trouver les pépites
         "order": "volume",
         "ascending": "false"
     }
     
     try:
-        response = requests.get(f"{GAMMA_BASE}/markets", params=params)
+        response = requests.get(f"{GAMMA_BASE}/markets", params=params, timeout=10)
         raw_markets = response.json()
         
         filtered_results = []
@@ -83,29 +85,30 @@ def get_markets():
                 break
                 
             try:
-                # 1. Extraction des prix
+                # 1. Calcul du temps restant
+                end_date_str = m.get("endDate") or m.get("end_date_iso")
+                if not end_date_str: continue
+                
+                end_date = datetime.fromisoformat(end_date_str.replace("Z", "+00:00"))
+                days_left = (end_date - now).total_seconds() / 86400
+
+                # Condition de temps : > 0.5 jour
+                if days_left <= 0.5: continue
+
+                # 2. Extraction et vérification des prix
                 prices_raw = m.get("outcomePrices")
                 if not prices_raw: continue
                 prices = eval(prices_raw)
-                if len(prices) < 2: continue
                 
-                price_yes = float(prices[0])
-                price_no = float(prices[1])
+                p_yes = float(prices[0])
+                p_no = float(prices[1])
                 
-                # 2. Calcul du temps restant
-                end_date_str = m.get("endDate")
-                days_left = 0
-                if end_date_str:
-                    # On nettoie la date pour Python (Z -> +00:00)
-                    end_date = datetime.fromisoformat(end_date_str.replace("Z", "+00:00"))
-                    days_left = (end_date - now).total_seconds() / 86400
-
-                # 3. Filtre Prix > 0.90
+                # Condition de prix : entre 0.90 et 0.99 (exclu)
                 match = None
-                if price_yes >= 0.90:
-                    match = {"side": "YES", "price": price_yes}
-                elif price_no >= 0.90:
-                    match = {"side": "NO", "price": price_no}
+                if 0.90 <= p_yes < 0.99:
+                    match = {"side": "YES", "price": p_yes}
+                elif 0.90 <= p_no < 0.99:
+                    match = {"side": "NO", "price": p_no}
 
                 if match:
                     filtered_results.append({
