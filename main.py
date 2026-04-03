@@ -35,13 +35,37 @@ def best_yield(m):
         return None
         
     try:
-        # Calcul du temps restant en jours
         days = (datetime.fromisoformat(end.replace("Z", "+00:00")) - datetime.now(timezone.utc)).total_seconds() / 86400
     except:
         return None
         
-    if days <= 0 or days > 7:
+    if days < 0.7 or days > 7:
         return None
+
+    def calculate_annualized_yield(p):
+        if 0 < p < 1:
+            return ((1 - p) / p) * (365 / days) * 100
+        return None
+
+    yield_yes = calculate_annualized_yield(prices[0])
+    yield_no = calculate_annualized_yield(prices[1])
+
+    # On choisit le meilleur côté UNIQUEMENT si le prix est >= 0.90
+    candidates = []
+    if yield_yes is not None and prices[0] >= 0.90:
+        candidates.append({"yield": yield_yes, "side": "YES", "price": prices[0]})
+    if yield_no is not None and prices[1] >= 0.90:
+        candidates.append({"yield": yield_no, "side": "NO", "price": prices[1]})
+
+    if not candidates:
+        return None
+
+    best = max(candidates, key=lambda x: x["yield"])
+
+    if best["yield"] < 12:
+        return None
+        
+    return {**best, "days_left": days, "yes_price": prices[0], "no_price": prices[1]
 
     def calculate_annualized_yield(p):
         # Formule : ((1 - prix) / prix) * (365 / jours_restants) * 100
