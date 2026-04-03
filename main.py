@@ -38,7 +38,10 @@ def best_yield(m):
         return None
 
     def ay(p):
-        return ((1 - p) / p) * (365 / days) * 100 if 0 < p < 1 else None
+        # Formule : (1 + (1-p)/p) ^ (365/days) - 1, exprimé en %
+        if 0 < p < 1:
+            return ((1 + (1 - p) / p) ** (365 / days) - 1) * 100
+        return None
 
     candidates = []
     if prices[0] >= 0.90:
@@ -51,7 +54,7 @@ def best_yield(m):
     if not candidates:
         return None
     best = max(candidates, key=lambda x: x["yield"])
-    if best["yield"] < 12:
+    if best["yield"] < 1200:
         return None
     return {**best, "days_left": days, "yes_price": prices[0], "no_price": prices[1]}
 
