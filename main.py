@@ -27,35 +27,43 @@ def best_yield(m):
         return None
     if len(prices) < 2:
         return None
+    
     end = m.get("endDate") or m.get("end_date_iso")
     if not end:
         return None
+    
     try:
         days = (datetime.fromisoformat(end.replace("Z", "+00:00")) - datetime.now(timezone.utc)).total_seconds() / 86400
     except:
         return None
-    if days < 0.7 or days > 7:
+
+    # On accepte les marchés qui finissent entre 0.1 jour et 10 jours
+    if days < 0.1 or days > 10:
         return None
 
     def ay(p):
-        # Formule : (1 + (1-p)/p) ^ (365/days) - 1, exprimé en %
-        if 0 < p < 1:
+        # Formule de rendement annualisé (Intérêts composés)
+        if 0.01 < p < 0.99: # On évite les prix extrêmes 0 ou 1
             return ((1 + (1 - p) / p) ** (365 / days) - 1) * 100
         return None
 
     candidates = []
-    if prices[0] >= 0.90:
-        y = ay(prices[0])
-        if y: candidates.append({"yield": y, "side": "YES", "price": prices[0]})
-    if prices[1] >= 0.90:
-        y = ay(prices[1])
-        if y: candidates.append({"yield": y, "side": "NO", "price": prices[1]})
+    # On analyse les deux côtés sans restriction de prix à 0.90
+    y_yes = ay(prices[0])
+    if y_yes: candidates.append({"yield": y_yes, "side": "YES", "price": prices[0]})
+    
+    y_no = ay(prices[1])
+    if y_no: candidates.append({"yield": y_no, "side": "NO", "price": prices[1]})
 
     if not candidates:
         return None
+        
     best = max(candidates, key=lambda x: x["yield"])
-    if best["yield"] < 1200:
+    
+    # Seuil de rendement plus réaliste : 15% minimum au lieu de 1200%
+    if best["yield"] < 15: 
         return None
+        
     return {**best, "days_left": days, "yes_price": prices[0], "no_price": prices[1]}
 
 @app.route("/")
