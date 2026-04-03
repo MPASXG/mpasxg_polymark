@@ -61,7 +61,7 @@ def best_yield(m):
         best = {"yield": yield_no, "side": "NO", "price": prices[1]}
 
     # On ignore les rendements trop faibles (inférieurs à 12% par an)
-    if not best["yield"] or best["yield"] < 12:
+    if not best["yield"] or best["yield"] < 5:
         return None
         
     return {**best, "days_left": days, "yes_price": prices[0], "no_price": prices[1]}
