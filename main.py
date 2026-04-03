@@ -16,7 +16,7 @@ EXCLUDED = {
     "basketball", "baseball", "hockey", "tennis", "golf", "mma", "ufc",
     "f1", "nascar", "racing", "crypto", "bitcoin", "btc", "ethereum",
     "eth", "defi", "nft", "weather", "temperature", "climat", "meteo",
-    "spread:", "up or down", "inhibitor", "kill", "map winner"
+    "spread:", "up or down", "inhibitor", "kill", "map winner","chengdu","doncaster","mansfield"
 }
 
 def is_excluded(m):
