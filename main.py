@@ -194,13 +194,13 @@ def screener():
     all_markets = []
     seen = set()
 
-    # On pagine pour récupérer suffisamment de marchés
-    for offset in range(0, 400, 100):
+    for offset in range(0, 600, 100):
         params = {
-            "active": "true", "closed": "false", "limit": 100,
-            "order": "endDate", "ascending": "true",
-            "end_date_min": (now + timedelta(days=1)).isoformat(),
-            "end_date_max": (now + timedelta(days=7)).isoformat(),
+            "active": "true",
+            "closed": "false",
+            "limit": 100,
+            "order": "endDate",
+            "ascending": "true",
             "offset": offset,
         }
         try:
@@ -208,10 +208,15 @@ def screener():
             if not batch:
                 break
             all_markets.extend(batch)
+            # Si tous les marchés de ce batch se terminent après 7 jours, on arrête
+            last_end = batch[-1].get("endDate", "")
+            if last_end:
+                last_days = (datetime.fromisoformat(last_end.replace("Z", "+00:00")) - now).total_seconds() / 86400
+                if last_days > 7:
+                    break
         except Exception as e:
             break
 
-    # Collecter les catégories uniques pour debug
     categories_seen = set()
     results = []
 
@@ -248,7 +253,8 @@ def screener():
         "markets": results,
         "count": len(results),
         "fetched_at": now.isoformat(),
-        "debug": "Catégories vues : " + ", ".join(sorted(categories_seen)[:30]),
+        "debug": "Catégories vues : " + ", ".join(sorted(c for c in categories_seen if c)[:40]),
+        "total_fetched": len(all_markets),
     })
 
 @app.route("/health")
