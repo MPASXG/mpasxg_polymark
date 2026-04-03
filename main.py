@@ -14,52 +14,61 @@ def index():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Yield Hunter Ultra-Deep 25k</title>
+        <title>Yield Hunter Galaxy 50k</title>
         <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            ::-webkit-scrollbar { width: 8px; }
+            ::-webkit-scrollbar-track { background: #020617; }
+            ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+            .glow-text { text-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        </style>
     </head>
-    <body class="bg-[#020617] text-slate-200 p-4 md:p-8 font-sans">
-        <div class="max-w-6xl mx-auto">
-            <div class="flex justify-between items-center mb-8 bg-slate-900/40 p-6 rounded-3xl border border-blue-500/10 shadow-2xl backdrop-blur-md">
-                <div>
-                    <h1 class="text-3xl font-black text-white tracking-tighter italic">🌌 ULTRA-DEEP <span class="text-blue-500" id="scan-count">0</span></h1>
-                    <p class="text-slate-500 text-[10px] mt-1 uppercase tracking-[0.3em] font-black">Full Database Scan | Yield > 5 | Vol > $1k</p>
+    <body class="bg-[#020617] text-slate-300 p-4 md:p-10 font-sans">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-10 bg-slate-900/40 p-8 rounded-[2rem] border border-white/5 shadow-2xl backdrop-blur-xl">
+                <div class="text-center md:text-left">
+                    <h1 class="text-4xl font-black text-white tracking-tighter italic glow-text uppercase">🌌 GALAXY-SCAN <span class="text-blue-500" id="scan-count">0</span></h1>
+                    <p class="text-slate-500 text-[10px] mt-2 uppercase tracking-[0.4em] font-black opacity-70">Filtre: 0.5j - 45j | Vol > $1k | Limit: 50k</p>
                 </div>
-                <div id="progress" class="text-blue-400 font-mono text-xs bg-blue-500/5 px-6 py-2 rounded-2xl border border-blue-500/20">
-                    Initialisation...
+                <div class="mt-6 md:mt-0 flex flex-col items-end">
+                    <div id="progress" class="text-blue-400 font-mono text-xs bg-blue-500/10 px-6 py-3 rounded-2xl border border-blue-500/20">
+                        Initialisation...
+                    </div>
+                    <div id="match-counter" class="mt-2 text-[10px] font-bold text-slate-600 uppercase tracking-widest">0 pépites trouvées</div>
                 </div>
             </div>
             
-            <div class="bg-slate-900/60 rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+            <div class="bg-slate-900/40 rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl overflow-x-auto">
                 <table class="w-full text-left border-collapse text-[11px] md:text-xs">
-                    <thead class="bg-blue-600/5 text-slate-500 uppercase font-black tracking-widest text-[9px]">
+                    <thead class="bg-white/[0.02] text-slate-500 uppercase font-black tracking-widest text-[9px]">
                         <tr>
-                            <th class="p-5">Marché</th>
-                            <th class="p-5 text-center">Côté</th>
-                            <th class="p-4 text-right">Volume</th>
-                            <th class="p-4 text-right">Prix</th>
-                            <th class="p-4 text-right">Temps</th>
-                            <th class="p-5 text-right text-blue-400">Yield Score</th>
+                            <th class="p-6">Marché</th>
+                            <th class="p-6 text-center">Côté</th>
+                            <th class="p-4 text-right text-slate-400">Volume</th>
+                            <th class="p-4 text-right text-slate-400">Prix</th>
+                            <th class="p-4 text-right text-orange-500/50">Échéance</th>
+                            <th class="p-6 text-right text-blue-400">Yield Score</th>
                         </tr>
                     </thead>
-                    <tbody id="content" class="divide-y divide-white/5">
+                    <tbody id="content" class="divide-y divide-white/[0.03]">
                         </tbody>
                 </table>
             </div>
         </div>
 
         <script>
-            let allData = [];
+            let allData = new Map();
             const tbody = document.getElementById('content');
             const progress = document.getElementById('progress');
             const scanCount = document.getElementById('scan-count');
+            const matchCounter = document.getElementById('match-counter');
 
-            async function startUltraScan() {
-                // 25 blocs de 1000 = 25,000 marchés
-                const totalBlocks = 25;
+            async function runUltraDeepScan() {
+                const totalBlocks = 50; 
                 
                 for (let i = 0; i < totalBlocks; i++) {
                     const offset = i * 1000;
-                    progress.innerText = `SCANNING BLOCK ${i+1}/${totalBlocks}...`;
+                    progress.innerText = `EXPLORATION BLOC ${i+1}/${totalBlocks}...`;
                     scanCount.innerText = (offset + 1000).toLocaleString();
 
                     try {
@@ -67,46 +76,42 @@ def index():
                         const chunk = await res.json();
                         
                         if (chunk && chunk.length > 0) {
-                            // Fusion intelligente sans doublons
-                            chunk.forEach(item => {
-                                if(!allData.find(x => x.slug === item.slug)) {
-                                    allData.push(item);
-                                }
-                            });
+                            chunk.forEach(item => allData.set(item.slug, item));
                             
-                            // Tri par Yield décroissant
-                            allData.sort((a, b) => b.yield - a.yield);
-                            renderTable();
+                            const sortedArray = Array.from(allData.values()).sort((a, b) => b.yield - a.yield);
+                            matchCounter.innerText = `${sortedArray.length} pépites trouvées`;
+                            renderTable(sortedArray);
                         }
                     } catch (e) {
-                        console.error("Erreur sur bloc " + i);
+                        console.error("Erreur secteur " + i);
                     }
                     
-                    // Petite pause pour laisser le navigateur respirer
-                    if (i % 5 === 0) await new Promise(r => setTimeout(r, 200));
+                    // Pause CPU pour fluidité UI
+                    if (i % 2 === 0) await new Promise(r => setTimeout(r, 100));
                 }
-                progress.innerText = "SCAN COMPLET (25k)";
+                progress.innerText = "SCAN TERMINÉ (50k)";
                 progress.classList.replace('text-blue-400', 'text-green-400');
-                progress.style.borderColor = "rgba(74, 222, 128, 0.3)";
             }
 
-            function renderTable() {
-                tbody.innerHTML = allData.map(m => `
-                    <tr class="hover:bg-blue-500/[0.03] transition-colors group">
-                        <td class="p-5 font-bold text-slate-300">
-                            <a href="https://polymarket.com/market/${m.slug}" target="_blank" class="hover:text-blue-400 transition-colors">${m.question}</a>
+            function renderTable(data) {
+                tbody.innerHTML = data.map(m => `
+                    <tr class="hover:bg-blue-500/[0.04] transition-all duration-300 group">
+                        <td class="p-6 font-bold text-slate-300 max-w-lg leading-relaxed">
+                            <a href="https://polymarket.com/market/${m.slug}" target="_blank" class="hover:text-blue-400 transition-colors italic">${m.question}</a>
                         </td>
-                        <td class="p-5 text-center">
-                            <span class="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-[9px] font-black group-hover:border-blue-500/30 transition-colors">${m.side}</span>
+                        <td class="p-6 text-center">
+                            <span class="bg-slate-950 px-3 py-1 rounded-full border border-slate-800 text-[9px] font-black group-hover:border-blue-500/40 uppercase text-slate-400">${m.side}</span>
                         </td>
                         <td class="p-4 text-right text-slate-500 font-mono italic">$${(m.volume/1000).toFixed(1)}k</td>
                         <td class="p-4 text-right font-mono text-slate-400">${m.price.toFixed(3)}</td>
-                        <td class="p-4 text-right font-mono text-orange-400/80 font-bold">${m.days_left.toFixed(2)}j</td>
-                        <td class="p-5 text-right font-mono text-blue-400 text-sm font-black italic underline decoration-blue-500/20">${m.yield.toFixed(2)}</td>
+                        <td class="p-4 text-right font-mono text-orange-500/70 font-bold tracking-tighter">${m.days_left.toFixed(2)}j</td>
+                        <td class="p-6 text-right font-mono text-blue-400 text-sm font-black italic group-hover:scale-110 transition-transform origin-right">
+                            ${m.yield.toFixed(2)}
+                        </td>
                     </tr>`).join('');
             }
 
-            startUltraScan();
+            runUltraDeepScan();
         </script>
     </body>
     </html>
@@ -119,52 +124,57 @@ def scan_chunk():
     now = datetime.now(timezone.utc)
     
     try:
-        # On utilise une session pour stabiliser les requêtes répétitives
-        with requests.Session() as s:
-            params = {
-                "active": "true",
-                "closed": "false",
-                "limit": 1000,
-                "offset": offset,
-                "order": "volume",
-                "ascending": "false"
-            }
-            r = s.get(f"{GAMMA_BASE}/markets", params=params, timeout=15)
-            markets = r.json()
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json"
+        })
+        
+        params = {
+            "active": "true",
+            "closed": "false",
+            "limit": 1000,
+            "offset": offset,
+            "order": "volume",
+            "ascending": "false"
+        }
+        r = session.get(f"{GAMMA_BASE}/markets", params=params, timeout=15)
+        markets = r.json()
 
-            for m in markets:
-                try:
-                    vol = float(m.get("volume", 0) or 0)
-                    if vol < 1000: continue
+        for m in markets:
+            try:
+                # 1. Filtre Volume $1k
+                vol = float(m.get("volume", 0) or 0)
+                if vol < 1000: continue
 
-                    end_date_str = m.get("endDate") or m.get("end_date_iso")
-                    if not end_date_str: continue
-                    end_dt = datetime.fromisoformat(end_date_str.replace("Z", "+00:00"))
-                    days = (end_dt - now).total_seconds() / 86400
-                    
-                    # On élargit un peu la fenêtre temporelle pour le scan profond
-                    if days <= 0.5 or days > 60: continue
+                # 2. Fenêtre de temps [0.5j - 45j]
+                end_date_str = m.get("endDate") or m.get("end_date_iso")
+                if not end_date_str: continue
+                end_dt = datetime.fromisoformat(end_date_str.replace("Z", "+00:00"))
+                days = (end_dt - now).total_seconds() / 86400
+                if days <= 0.5 or days > 45: continue
 
-                    p_raw = m.get("outcomePrices")
-                    if not p_raw: continue
-                    prices = json.loads(p_raw)
-                    if len(prices) < 2: continue
-                    
-                    p_yes, p_no = float(prices[0]), float(prices[1])
+                # 3. Extraction Prix
+                p_raw = m.get("outcomePrices")
+                if not p_raw: continue
+                prices = json.loads(p_raw)
+                if len(prices) < 2: continue
+                p_yes, p_no = float(prices[0]), float(prices[1])
 
-                    match = None
-                    if 0.90 <= p_yes < 0.99: match = {"side": "YES", "p": p_yes}
-                    elif 0.90 <= p_no < 0.99: match = {"side": "NO", "p": p_no}
+                # 4. Calcul Yield [0.90 - 0.99]
+                match = None
+                if 0.90 <= p_yes < 0.99: match = {"side": "YES", "p": p_yes}
+                elif 0.90 <= p_no < 0.99: match = {"side": "NO", "p": p_no}
 
-                    if match:
-                        score = (1 / match["p"]) ** (365 / days)
-                        if score >= 5:
-                            all_results.append({
-                                "question": m.get("question"), "slug": m.get("slug"),
-                                "side": match["side"], "price": match["p"],
-                                "days_left": days, "yield": score, "volume": vol
-                            })
-                except: continue
+                if match:
+                    score = (1 / match["p"]) ** (365 / days)
+                    if score >= 5:
+                        all_results.append({
+                            "question": m.get("question"), "slug": m.get("slug"),
+                            "side": match["side"], "price": match["p"],
+                            "days_left": days, "yield": score, "volume": vol
+                        })
+            except: continue
         return jsonify(all_results)
     except:
         return jsonify([])
