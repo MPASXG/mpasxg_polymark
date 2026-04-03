@@ -11,10 +11,12 @@ GAMMA_BASE = "https://gamma-api.polymarket.com"
 
 # Liste de mots-clés pour filtrer les marchés non désirés
 EXCLUDED = {
-    "sports", "sport", "Hyperliquid", "Game", "Solana", "BNB", "XRP","nba", "nfl", "nhl", "mlb", "soccer", "football", 
-    "basketball", "baseball", "hockey", "tennis", "golf", "mma", "ufc", 
-    "f1", "nascar", "racing", "crypto", "bitcoin", "btc", "ethereum", 
-    "eth", "defi", "nft", "weather", "climat", "meteo", "météo"
+    "sport", "hyperliquid", "game", "solana", "bnb", "xrp", "dogecoin",
+    "nba", "nfl", "nhl", "mlb", "soccer", "football",
+    "basketball", "baseball", "hockey", "tennis", "golf", "mma", "ufc",
+    "f1", "nascar", "racing", "crypto", "bitcoin", "btc", "ethereum",
+    "eth", "defi", "nft", "weather", "temperature", "climat", "meteo",
+    "spread:", "up or down", "inhibitor", "kill", "map winner"
 }
 
 def is_excluded(m):
