@@ -9,20 +9,27 @@ CORS(app)
 
 GAMMA_BASE = "https://gamma-api.polymarket.com"
 
-# On inclut UNIQUEMENT ces catégories
-ALLOWED_TAGS = [
-    "politics", "elections", "economy", "economics", "culture", 
-    "pop-culture", "science", "geopolitics", "business", "finance",
-    "entertainment", "media", "society", "law", "health"
+# Tags qu'on veut garder (mots-clés dans le label du tag)
+WANTED_TAG_KEYWORDS = [
+    "politics", "elections", "election", "economy", "economics",
+    "culture", "pop culture", "entertainment", "business", "finance",
+    "geopolitics", "science", "law", "health", "media", "society",
+    "government", "policy", "trade", "tariff"
 ]
 
-def is_allowed(m):
-    slug = (m.get("slug") or "").lower()
-    question = (m.get("question") or "").lower()
-    category = (m.get("category") or "").lower()
-    tags = str(m.get("tags") or "").lower()
-    text = slug + " " + question + " " + category + " " + tags
-    return any(t in text for t in ALLOWED_TAGS)
+def get_wanted_tag_ids():
+    try:
+        resp = requests.get(f"{GAMMA_BASE}/tags", timeout=10)
+        tags = resp.json()
+        ids = []
+        for tag in tags:
+            label = (tag.get("label") or tag.get("slug") or "").lower()
+            if any(kw in label for kw in WANTED_TAG_KEYWORDS):
+                ids.append(str(tag.get("id")))
+        return ids
+    except Exception as e:
+        print(f"Error fetching tags: {e}")
+        return []
 
 def best_yield(m):
     try:
@@ -112,6 +119,7 @@ def index():
                     </table>
                 </div>
             </div>
+            <div id="debug" class="text-xs text-slate-600 mt-4"></div>
         </div>
 
         <script>
@@ -131,17 +139,20 @@ def index():
                     let vb = sortKey === 'yield' ? b.best_yield : sortKey === 'days' ? b.days_left : b.volume;
                     return sortAsc ? va - vb : vb - va;
                 });
-
+                if (!sorted.length) {
+                    document.getElementById('table-body').innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-500">Aucune opportunité trouvée.</td></tr>';
+                    return;
+                }
                 document.getElementById('table-body').innerHTML = sorted.map(m => {
                     const yPct = Math.round(m.yes_price * 100);
                     const nPct = 100 - yPct;
                     const yieldDisplay = m.best_yield > 999 ? '>999%' : Math.round(m.best_yield) + '%';
                     const yieldColor = m.best_yield > 100 ? 'text-green-400' : 'text-yellow-400';
-                    const sideClass = m.best_side === 'YES' 
-                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                    const sideClass = m.best_side === 'YES'
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                         : 'bg-purple-500/20 text-purple-400 border border-purple-500/30';
-                    const vol = m.volume >= 1e6 ? '$' + (m.volume/1e6).toFixed(1) + 'M' 
-                              : m.volume >= 1e3 ? '$' + Math.round(m.volume/1e3) + 'K' 
+                    const vol = m.volume >= 1e6 ? '$' + (m.volume/1e6).toFixed(1) + 'M'
+                              : m.volume >= 1e3 ? '$' + Math.round(m.volume/1e3) + 'K'
                               : '$' + Math.round(m.volume);
                     const link = 'https://polymarket.com/market/' + m.slug;
                     return `<tr class="hover:bg-slate-700/30 transition cursor-pointer" onclick="window.open('${link}','_blank')">
@@ -169,6 +180,7 @@ def index():
                     allMarkets = data.markets;
                     document.getElementById('status').innerText = 'Mis à jour : ' + new Date(data.fetched_at).toLocaleTimeString('fr-FR');
                     document.getElementById('stat-count').innerText = data.count;
+                    document.getElementById('debug').innerText = 'Tags utilisés : ' + (data.tag_ids || []).join(', ');
                     if (data.markets.length) {
                         const yields = data.markets.map(m => m.best_yield);
                         document.getElementById('stat-best').innerText = Math.min(Math.max(...yields), 9999).toFixed(0) + '%';
@@ -176,7 +188,7 @@ def index():
                     }
                     renderTable();
                 } catch(e) {
-                    document.getElementById('table-body').innerHTML = '<tr><td colspan="6" class="p-10 text-center text-red-400">Erreur de chargement.</td></tr>';
+                    document.getElementById('table-body').innerHTML = '<tr><td colspan="6" class="p-10 text-center text-red-400">Erreur : ' + e.message + '</td></tr>';
                 }
             }
 
@@ -187,39 +199,67 @@ def index():
     </html>
     """)
 
+@app.route("/api/tags")
+def list_tags():
+    """Debug endpoint — voir tous les tags disponibles"""
+    try:
+        resp = requests.get(f"{GAMMA_BASE}/tags", timeout=10)
+        return jsonify(resp.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
 @app.route("/api/screener")
 def screener():
     now = datetime.now(timezone.utc)
-    params = {
-        "active": "true", "closed": "false", "limit": 200,
-        "order": "endDate", "ascending": "true",
-        "end_date_min": (now + timedelta(days=1)).isoformat(),
-        "end_date_max": (now + timedelta(days=7)).isoformat(),
-    }
-    try:
-        markets = requests.get(f"{GAMMA_BASE}/markets", params=params, timeout=10).json()
-    except Exception as e:
-        return jsonify({"error": str(e)}), 502
+
+    # Récupère les tag IDs dynamiquement
+    tag_ids = get_wanted_tag_ids()
+
     results = []
-    for m in markets:
-        if not is_allowed(m):
+    seen = set()
+
+    for tag_id in tag_ids:
+        params = {
+            "active": "true", "closed": "false", "limit": 100,
+            "order": "endDate", "ascending": "true",
+            "tag_id": tag_id,
+            "end_date_min": (now + timedelta(days=1)).isoformat(),
+            "end_date_max": (now + timedelta(days=7)).isoformat(),
+        }
+        try:
+            markets = requests.get(f"{GAMMA_BASE}/markets", params=params, timeout=10).json()
+        except Exception:
             continue
-        b = best_yield(m)
-        if not b:
-            continue
-        results.append({
-            "question": m.get("question", ""),
-            "slug": m.get("slug", m.get("conditionId", "")),
-            "category": m.get("category", "Divers"),
-            "volume": float(m.get("volume", 0) or 0),
-            "best_yield": round(b["yield"], 1),
-            "best_side": b["side"],
-            "yes_price": round(b["yes_price"], 4),
-            "no_price": round(b["no_price"], 4),
-            "days_left": round(b["days_left"], 2),
-        })
+
+        for m in markets:
+            mid = m.get("id") or m.get("conditionId")
+            if mid in seen:
+                continue
+            seen.add(mid)
+
+            b = best_yield(m)
+            if not b:
+                continue
+
+            results.append({
+                "question": m.get("question", ""),
+                "slug": m.get("slug", m.get("conditionId", "")),
+                "category": m.get("category", "Divers"),
+                "volume": float(m.get("volume", 0) or 0),
+                "best_yield": round(b["yield"], 1),
+                "best_side": b["side"],
+                "yes_price": round(b["yes_price"], 4),
+                "no_price": round(b["no_price"], 4),
+                "days_left": round(b["days_left"], 2),
+            })
+
     results.sort(key=lambda x: x["best_yield"], reverse=True)
-    return jsonify({"markets": results, "count": len(results), "fetched_at": now.isoformat()})
+    return jsonify({
+        "markets": results,
+        "count": len(results),
+        "tag_ids": tag_ids,
+        "fetched_at": now.isoformat()
+    })
 
 @app.route("/health")
 def health():
